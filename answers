@@ -1,0 +1,337 @@
+						Assignment 2 – Processes and Threads
+
+1.
+
+Environmental variables are the variables that are defined for the current shell and are inherited by any child shells or processes. Environmental variables are used to pass information into processes that are spawned from the shell.We can see a list of all of our environmental variables by using the env or printenv commands
+Environment variables are a set of dynamic named values that can affect the way running processes will behave on a computer. They are part of the environment in which a process runs.
+
+(a)
+
+PROGRAM  : To print the  environmental variables
+
+#include<stdio.h>
+#include<stdlib.h> 
+int main()
+{
+printf("PATH = %s\n", getenv("PATH"));
+printf("USER = %s\n", getenv("USER"));
+printf("HOME = %s\n", getenv("HOME"));
+printf("PWD  = %s\n", getenv("PWD"));
+return (0);
+}
+
+OUTPUT 
+$ gcc -o 1a 1a.c -lpthread
+$ ./1a
+PATH= /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+USER = johns
+HOME = /home/johns
+PWD  = /home/johns/AMRITA/SEM 3/REDO/OPERATING SYSTEM /assignment 2
+
+
+
+
+
+
+(b)
+The setenv() function shall update or add a variable in the environment of the calling process.
+PROGRAM 
+#include<stdio.h>
+#include<stdlib.h> 
+int main()
+{
+setenv("ROOT","root","1");
+printf("ROOT = %s\n", getenv("ROOT"));
+printf("PATH = %s\n", getenv("PATH"));
+printf("USER = %s\n", getenv("USER"));
+printf("HOME = %s\n", getenv("HOME"));
+printf("PWD  = %s\n", getenv("PWD"));
+return (0);
+}
+
+OUTPUT 
+$ gcc -o 1b 1b.c -lpthread
+$ ./1b
+
+ROOT = root
+PATH =  /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+USER = johns
+HOME = /home/johns
+PWD  = /home/johns/AMRITA/SEM 3/REDO/OPERATING SYSTEM /assignment 2
+
+
+
+
+
+
+
+
+
+
+
+
+2.
+
+(a)
+
+PROGRAM 
+
+#include <stdio.h>
+#include <pthread.h>
+#include <stdlib.h>
+
+void * thread1()
+{
+        printf("Hello World\n");
+       
+}
+
+int main()
+{
+        int status;
+        pthread_t tid1;
+
+        pthread_create(&tid1,NULL,thread1,NULL);
+       
+        pthread_join(tid1,NULL);
+         return 0;
+}
+
+OUTPUT
+
+$gcc -o 2a 2a.c -lpthread
+$./2a
+$ Hello World
+
+(b)
+
+PROGRAM
+
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdlib.h>
+
+#define TRUE 1
+#define FALSE 0
+
+char n[1024];
+pthread_mutex_t lock= PTHREAD_MUTEX_INITIALIZER;
+int string_produce=FALSE;
+
+pthread_cond_t cond;
+
+void * produce1()
+{
+        while(1){
+                while(string_produce);
+                pthread_mutex_lock(&lock);
+                printf("Enter a string: ");
+                scanf("%s",n);
+                string_produce=TRUE;
+                pthread_mutex_unlock(&lock);
+                pthread_cond_signal(&cond);
+        }
+}
+
+void * consume1()
+{
+        while(1){
+                pthread_mutex_lock(&lock);
+                while(!string_produce)
+                        pthread_cond_wait(&cond,&lock);
+                        printf("The string entered is %s\n",n);
+
+                        string_produce=FALSE;
+                        pthread_mutex_unlock(&lock);
+        }
+}
+int main()
+{
+        int status;
+        pthread_t tr, tw;
+
+        pthread_create(&tr,NULL,produce1,NULL);
+        pthread_create(&tw,NULL,consume1,NULL);
+
+        pthread_join(tr,NULL);
+        pthread_join(tw,NULL);
+        return 0;
+}
+
+OUTPUT
+
+ john@johndt  ~$ gcc -o 2b 2b.c -lpthread
+                          $ ./2b
+
+                          Enter a string: Johny 
+		  The string entered is Johny
+
+
+
+
+3 
+(a)
+
+The sequence of execution of the program would be  like the first  1000 'o' is printed which is inside the print_os() function and  then 1000 'x' will be printed after that ,it means that the  print_os
+function is executed first and after its termination print_xs is executed.
+
+GIVEN PROGRAM
+
+#include <stdio.h>
+#include <pthread.h>
+
+static void print_os();
+
+pthread_mutex_t mutex;
+void* print_xs(void* unused) {                                 
+      int j;
+      pthread_mutex_lock(&mutex);			 	// 2 .Locks the mutex...
+      for(j = 0; j < 1000; j++)					// 4 .Jumbs to main()
+          fputc('x', stderr);                                                          // 7.prints 1000 x 
+pthread_mutex_unlock(&mutex);
+return NULL;
+}
+static void print_os() {
+    int i;
+    for(i = 0; i < 1000; i++)
+           fputc('o', stderr);
+}
+int main() {                                                                      // 1. Starts execution from here 
+    pthread_t new;
+    pthread_create(&new, NULL, &print_xs, NULL);    // 3.Spawning a new thread using print_xs
+    pthread_mutex_lock(&mutex);			     // 4.main thread gets into critical region	
+    print_os();                                                                  //  5.calls the print_os(),thus prints 1000 ‘o’
+    pthread_mutex_unlock(&mutex);
+    pthread_join(new, NULL);				   // 6.calls join for new thread to join execution
+return 0;
+}
+
+
+(b)
+
+On modifying the program such that the function print_xs executes before the
+function print_os using a synchronization primitive
+
+By using wait and signal for threads we can achieve  synchronization. 
+pthread_cond_wait() blocks the thread that wants to access mutex and will only release the thread when pthread_cond_signal() is sent to the calling thread.
+
+
+
+Therefore, if the print_xs() function need to execute first, then pthread_cond_wait() will be used in print_os() function and in the print_xs() function pthread_cond_signal() will be used to signal the main() function that can then lock and use the mutex.
+
+The pthread_mutex_lock() routine is used by a thread to acquire a lock on the specified mutex variable. If the mutex is already locked by another thread, this call will block the calling thread until the mutex is unlocked. 
+
+pthread_mutex_unlock() will unlock a mutex if called by the owning thread. Calling this routine is required after a thread has completed its use of protected data if other threads are to acquire the mutex for their work with the protected data. An error will be returned if: 
+If the mutex was already unlocked 
+If the mutex is owned by another thread 
+
+
+PROGRAM 
+
+#include <stdio.h>
+#include <pthread.h>
+
+static void print_os();
+pthread_t cond;
+pthread_mutex_t mutex;
+void* print_xs(void* unused) {
+      int j;
+pthread_mutex_lock(&mutex);                     
+      for(j = 0; j < 1000; j++)
+          fputc('x', stderr);
+pthread_cond_signal(&cond);
+pthread_mutex_unlock(&mutex);
+return NULL;
+}
+static void print_os() {
+    int i;
+    for(i = 0; i < 1000; i++)
+           fputc('o', stderr);
+}
+int main() {
+    pthread_t new;
+    pthread_create(&new, NULL, &print_xs, NULL);        
+    pthread_mutex_lock(&mutex);			          
+    pthread_cond_wait(&cond,&mutex);
+    print_os();
+    pthread_mutex_unlock(&mutex);
+    pthread_join(new, NULL);
+return 0;
+}
+
+
+OUTPUT
+
+Prints 1000 ‘x’ first then 1000 ‘o’
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+
+
+
+(4)
+
+PROGRAM
+
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdlib.h>
+
+#define TRUE 1
+#define FALSE 0
+
+int n,m;
+pthread_mutex_t lock;
+int string_read=FALSE;
+
+
+pthread_cond_t cond;
+void * thread1()
+{
+        while(1){
+                while(string_read);
+                pthread_mutex_lock(&lock);
+                printf("Enter  values to multiply in main thread: ");
+                scanf("%d%d",&n,&m);
+                string_read=TRUE;
+                pthread_mutex_unlock(&lock);
+                pthread_cond_signal(&cond);
+        }
+}
+
+void * thread2()
+{
+        while(1){
+                pthread_mutex_lock(&lock);
+                int o;
+                while(!string_read)
+                        pthread_cond_wait(&cond,&lock);
+                        o=m*n;
+                        printf("Printing from thread 2: %d\n",o);
+                        string_read=FALSE;
+                        pthread_mutex_unlock(&lock);
+        }
+}
+int main()
+{
+        int status;
+        pthread_t t1, t2;
+
+        pthread_create(&t1,NULL,thread1,NULL);
+        pthread_create(&t2,NULL,thread2,NULL);
+
+        pthread_join(t1,NULL);
+        pthread_join(t2,NULL);
+        pthread_exit((void *)NULL);
+        return 0;
+}
+
+OUTPUT
+
+john@johndt:~$ gcc -o 4 4.c -lpthread
+                          $ ./4
+
+                          Enter 2 values into the main thread: 2
+		  5
+                          Printing product from other thread 2: 10
